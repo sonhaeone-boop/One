@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Pattern Ruler Calc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html,body{background:#c8c5be;min-height:100%;-webkit-tap-highlight-color:transparent;}
+    button{-webkit-tap-highlight-color:transparent;font-family:'DM Sans',sans-serif;}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    /* ── Math helpers ─────────────────────────────────── */
+    const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
+
+    function parseNum(s) {
+      const str = (s || "").trim();
+      if (!str) return null;
+      const neg = str.startsWith("-");
+      const body = neg ? str.slice(1).trim() : str;
+      let val = null;
+      if (/^\d*\.?\d+$/.test(body)) val = parseFloat(body);
+      else if (/^\d+\/\d+$/.test(body)) {
+        const [n, d] = body.split("/").map(Number);
+        val = d === 0 ? null : n / d;
+      } else {
+        const m = body.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+        if (m) {
+          const [w, n, d] = m.slice(1).map(Number);
+          val = d === 0 ? null : w + n / d;
+        }
+      }
+      return val == null ? null : (neg ? -val : val);
+    }
+
+    function toT(v) { return v != null ? Math.round(v * 16) : null; }
+
+    function fmtFrac(t) {
+      if (t == null) return "—";
+      if (t < 0) return `−${fmtFrac(-t)}`;
+      const w = Math.floor(t / 16), r = t % 16;
+      if (r === 0) return `${w}"`;
+      const g = gcd(r, 16);
+      return w > 0 ? `${w} ${r/g}/${16/g}"` : `${r/g}/${16/g}"`;
+    }
+
+    function fmtFracExpr(t) {
+      if (t == null) return "";
+      if (t < 0) return `−${fmtFracExpr(-t)}`;
+      const w = Math.floor(t / 16), r = t % 16;
+      if (r === 0) return `${w}`;
+      const g = gcd(r, 16);
+      return w > 0 ? `${w} ${r/g}/${16/g}` : `${r/g}/${16/g}`;
+    }
+
+    function calcOp(a, op, b) {
+      if (a == null || b == null) return null;
+      if (op === "+") return a + b;
+      if (op === "−") return a - b;
+      if (op === "×") return a * b;
+      if (op === "÷") return b === 0 ? null : a / b;
+      return null;
+    }
+
+    /* ── Visual fraction display ──────────────────────── */
+    function splitTyped(raw) {
+      const neg = raw.startsWith("-");
+      const input = neg ? raw.slice(1) : raw;
+      const prefix = neg ? "−" : "";
+      if (input.includes(" ")) {
+        const [wholeStr, rest = ""] = input.split(" ");
+        if (rest.includes("/")) {
+          const [num, den] = rest.split("/");
+          return { whole: prefix + wholeStr, num, den, showFrac: true };
+        }
+        return { whole: prefix + wholeStr, num: rest, den: "", showFrac: true };
+      }
+      if (input.includes("/")) {
+        const [num, den] = input.split("/");
+        return { whole: prefix, num, den, showFrac: true };
+      }
+      return { whole: prefix + input, num: "", den: "", showFrac: false };
+    }
+
+    function TypedDisplay({ input, color }) {
+      if (input.includes(".") || !input) return <span>{input || "0"}</span>;
+      const { whole, num, den, showFrac } = splitTyped(input);
+      if (!showFrac) return <span>{whole}</span>;
+      return (
+        <span style={{ display:"inline-flex", alignItems:"center", gap:5 }}>
+          {whole && <span>{whole}</span>}
+          <span style={{ display:"inline-flex", flexDirection:"column", alignItems:"center", fontSize:"0.5em", lineHeight:1.1, fontWeight:700 }}>
+            <span>{num || "·"}</span>
+            <span style={{ width:"100%", height:1.5, background: color, margin:"2px 0" }}/>
+            <span>{den || "·"}</span>
+          </span>
+        </span>
+      );
+    }
+
+    /* ── Key component ────────────────────────────────── */
+    function Key({ label, sub, onPress, dark, orange, muted }) {
+      const [pressed, setPressed] = useState(false);
+      const bg     = orange ? "#e8621a" : dark ? "#2a2a2a" : muted ? "#d8d5cf" : "#e2dfd9";
+      const fg     = (dark || orange) ? "#f0ede8" : muted ? "#1a1a1a" : "#1a1a1a";
+      const shadow = pressed
+        ? "inset 0 2px 5px rgba(0,0,0,0.35)"
+        : orange ? "0 4px 0 #a84810"
+        : dark    ? "0 4px 0 #111"
+        : muted   ? "0 4px 0 #b0ada6"
+        : "0 4px 0 #b5b2ab";
+      return (
+        <button
+          onPointerDown={() => { setPressed(true); onPress(); }}
+          onPointerUp={() => setPressed(false)}
+          onPointerLeave={() => setPressed(false)}
+          style={{
+            borderRadius:8, border:"none", cursor:"pointer",
+            background:bg, color:fg, boxShadow:shadow,
+            transform: pressed ? "translateY(4px)" : "translateY(0)",
+            transition:"transform 0.05s, box-shadow 0.05s",
+            display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center",
+            userSelect:"none", WebkitUserSelect:"none",
+            touchAction:"manipulation", padding:0,
+            height:"100%", minHeight:62, gap:2,
+          }}
+        >
+          <span style={{ fontSize: label.length > 2 ? 14 : 22, fontWeight:700, fontFamily:"'DM Sans',sans-serif", lineHeight:1 }}>{label}</span>
+          {sub && <span style={{ fontSize:8.5, opacity:0.5, fontWeight:600, letterSpacing:0.3, lineHeight:1 }}>{sub}</span>}
+        </button>
+      );
+    }
+
+    const CM_PER_INCH = 2.54;
+
+    // Evaluate a token stream left-to-right (no operator precedence — sequential like a desk calc).
+    // tokens: array of { type:"num", inches, label } | { type:"op", op }
+    function evalTokens(tokens) {
+      if (tokens.length === 0) return null;
+      let acc = tokens[0].type === "num" ? tokens[0].inches : null;
+      if (acc == null) return null;
+      let i = 1;
+      while (i < tokens.length) {
+        const opTok = tokens[i];
+        const numTok = tokens[i + 1];
+        if (!opTok || opTok.type !== "op" || !numTok || numTok.type !== "num") break;
+        const r = calcOp(acc, opTok.op, numTok.inches);
+        if (r == null) return null;
+        acc = r;
+        i += 2;
+      }
+      return acc;
+    }
+
+    // Build the display string for a token stream
+    function tokensToStr(tokens, pendingInput, pendingUnit) {
+      const parts = tokens.map(t => t.type === "op" ? t.op : t.label);
+      if (pendingInput) parts.push(pendingInput + (pendingUnit === "cm" ? "cm" : "\""));
+      return parts.join("  ");
+    }
+
+    /* ── Main App ─────────────────────────────────────── */
+    function App() {
+      const [tokens,   setTokens]   = useState([]);   // committed number/operator tokens
+      const [input,    setInput]    = useState("");   // number currently being typed
+      const [unit,     setUnit]     = useState("inch");
+      const [result,   setResult]   = useState(null); // set only when = pressed (inches)
+      const [resultExpr, setResultExpr] = useState(null); // frozen expression string after =
+      const [history,  setHistory]  = useState([]);
+      const [recalledExpr, setRecalledExpr] = useState(null);
+
+      const rawInputVal = parseNum(input);
+      const inputInches = rawInputVal == null ? null
+        : (unit === "cm" ? rawInputVal / CM_PER_INCH : rawInputVal);
+
+      const isTyping   = input !== "";
+      const showingResult = result != null && !isTyping && tokens.length === 0;
+
+      // Last committed number token (ignores trailing operator)
+      const lastNumToken = [...tokens].reverse().find(t => t.type === "num");
+
+      // Live value shown in decimal/cm row: typed value → result → last number entered
+      const liveInches = isTyping ? inputInches
+        : (result != null ? result
+        : (lastNumToken ? lastNumToken.inches : null));
+      const liveT = toT(liveInches);
+      const exact = liveInches != null && Math.abs(liveInches * 16 - liveT) < 0.001;
+
+      // Main (big) display: while building an expression, show the running expression string;
+      // after "=" show just the result; empty shows "0".
+      const mainExpr = tokensToStr(tokens, input, unit);
+      const hasExprContent = tokens.length > 0 || isTyping;
+      // Committed tokens as a plain string prefix (everything except the number being typed now)
+      const committedPrefix = tokens.map(t => t.type === "op" ? t.op : t.label).join("  ");
+      // Whether the value being typed is a fraction (so we render it stacked with · placeholders)
+      const typingFraction = isTyping && unit === "inch" && (input.includes("/") || input.includes(" "));
+
+      // Expression (grey line on top) — mirrors the building expression, or frozen after "="
+      const exprLine = recalledExpr
+        ?? (showingResult ? resultExpr
+        : mainExpr);
+
+      const clearRecall = () => setRecalledExpr(null);
+
+      // helper: make a number token from current input
+      function makeNumToken() {
+        if (inputInches == null) return null;
+        const label = unit === "cm" ? `${rawInputVal}cm` : fmtFracExpr(toT(inputInches));
+        return { type:"num", inches: inputInches, label };
+      }
+
+      function pressDigit(d) {
+        clearRecall();
+        if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); setInput(String(d)); return; }
+        setInput(v => v + String(d));
+      }
+      function pressDot() {
+        clearRecall();
+        if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); setInput("0."); return; }
+        if (!input.includes(".")) setInput(v => (v || "0") + ".");
+      }
+      function pressSlash() {
+        clearRecall();
+        if (unit === "cm") return;
+        if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); return; }
+        if (!input.includes("/") && input) setInput(v => v + "/");
+      }
+      function pressSpace() {
+        clearRecall();
+        if (unit === "cm") return;
+        if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); return; }
+        if (input && !input.includes(" ") && !input.includes("/") && !input.includes(".")) {
+          setInput(v => v + " ");
+        }
+      }
+      function toggleUnit() {
+        clearRecall();
+        setUnit(u => u === "inch" ? "cm" : "inch");
+      }
+      function pressOp(newOp) {
+        clearRecall();
+        // If a result is showing, continue calculating from it
+        if (showingResult) {
+          setTokens([{ type:"num", inches: result, label: fmtFracExpr(toT(result)) }, { type:"op", op:newOp }]);
+          setResult(null); setResultExpr(null); setInput("");
+          return;
+        }
+        const numTok = makeNumToken();
+        if (numTok) {
+          setTokens(t => [...t, numTok, { type:"op", op:newOp }]);
+          setInput("");
+        } else if (tokens.length && tokens[tokens.length-1].type === "op") {
+          // replace trailing operator
+          setTokens(t => [...t.slice(0,-1), { type:"op", op:newOp }]);
+        } else if (tokens.length && tokens[tokens.length-1].type === "num") {
+          setTokens(t => [...t, { type:"op", op:newOp }]);
+        }
+      }
+      function pressEquals() {
+        clearRecall();
+        const numTok = makeNumToken();
+        const finalTokens = numTok ? [...tokens, numTok] : [...tokens];
+        // strip a dangling trailing operator
+        while (finalTokens.length && finalTokens[finalTokens.length-1].type === "op") finalTokens.pop();
+        if (finalTokens.length < 1) return;
+        const res = evalTokens(finalTokens);
+        if (res == null) return;
+        const exprStr = tokensToStr(finalTokens, "", unit);
+        const rT = toT(res);
+        setResult(res);
+        setResultExpr(exprStr);
+        setTokens([]);
+        setInput("");
+        setHistory(h => [{
+          expr: exprStr, result: fmtFrac(rT), resultVal: res,
+          cm: (rT / 16 * CM_PER_INCH).toFixed(2),
+          exact: Math.abs(res*16 - rT) < 0.001, id: Date.now(),
+        }, ...h].slice(0, 3));
+      }
+      function pressAC() {
+        clearRecall();
+        setTokens([]); setInput(""); setResult(null); setResultExpr(null); setUnit("inch");
+      }
+      function pressBack() {
+        clearRecall();
+        if (showingResult) { setResult(null); setResultExpr(null); return; }
+        if (input !== "") { setInput(v => v.slice(0, -1)); return; }
+        // remove last token
+        setTokens(t => t.slice(0, -1));
+      }
+      function recallHistory(h) {
+        setTokens([]); setInput("");
+        setResult(h.resultVal); setResultExpr(h.expr); setUnit("inch");
+        setRecalledExpr(h.expr);
+      }
+
+
+      return (
+        <div style={{ minHeight:"100vh", background:"#c8c5be", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 10px 48px", fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ width:"100%", maxWidth:400, background:"#f0ede8", borderRadius:20, boxShadow:"inset 0 1px 0 rgba(255,255,255,0.85), 0 20px 60px rgba(0,0,0,0.28), 0 2px 0 #a8a5a0" }}>
+
+            {/* Header */}
+            <div style={{ padding:"12px 18px 8px", display:"flex", justifyContent:"space-between" }}>
+              <div style={{ fontSize:7.5, color:"#aaa", fontWeight:700, letterSpacing:3 }}>PATTERN RULER CALC</div>
+              <div style={{ fontSize:7.5, color:"#ccc", fontWeight:600, letterSpacing:2 }}>1⁄16″</div>
+            </div>
+
+            {/* LCD */}
+            <div style={{ margin:"0 12px 14px", background:"#dad7d0", borderRadius:10, padding:"14px 16px", height:138, border:"1px solid #c4c1b9", boxShadow:"inset 0 2px 5px rgba(0,0,0,0.08)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+              <div style={{ fontSize:15, color:"#888", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
+                {exprLine || "\u00A0"}
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <span style={{ fontSize:36, fontWeight:700, color:"#1a1a1a", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
+                  {showingResult
+                    ? fmtFrac(toT(result))
+                    : typingFraction
+                      ? <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>
+                          {committedPrefix && <span>{committedPrefix}</span>}
+                          <TypedDisplay input={input} color="#1a1a1a"/>
+                        </span>
+                      : hasExprContent
+                        ? <span style={{ fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>{mainExpr}</span>
+                        : "0"}
+                </span>
+              </div>
+              <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
+                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#c44f12", fontWeight:700 }}>≈</span>}
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#777" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
+                  {liveInches != null ? (liveT/16).toFixed(3)+"″" : "0.000″"}
+                </span>
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#555" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
+                  {liveInches != null ? (liveT/16*CM_PER_INCH).toFixed(2)+" cm" : "0.00 cm"}
+                </span>
+              </div>
+            </div>
+
+            {/* Keypad */}
+            <div style={{ padding:"0 12px 14px" }}>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gridAutoRows:"62px", gap:7 }}>
+                <Key label="⌫"  dark  onPress={pressBack}/>
+                <Key label="AC" dark  onPress={pressAC}/>
+                <Key label={unit === "inch" ? "inch" : "cm"} sub="tap: unit" orange={unit === "cm"} muted={unit === "inch"} onPress={toggleUnit}/>
+                <Key label="÷"  dark  onPress={() => pressOp("÷")}/>
+                <Key label="7"  onPress={() => pressDigit(7)}/>
+                <Key label="8"  onPress={() => pressDigit(8)}/>
+                <Key label="9"  onPress={() => pressDigit(9)}/>
+                <Key label="×"  dark  onPress={() => pressOp("×")}/>
+                <Key label="4"  onPress={() => pressDigit(4)}/>
+                <Key label="5"  onPress={() => pressDigit(5)}/>
+                <Key label="6"  onPress={() => pressDigit(6)}/>
+                <Key label="−"  dark  onPress={() => pressOp("−")}/>
+                <Key label="1"  onPress={() => pressDigit(1)}/>
+                <Key label="2"  onPress={() => pressDigit(2)}/>
+                <Key label="3"  onPress={() => pressDigit(3)}/>
+                <Key label="+"  dark  onPress={() => pressOp("+")}/>
+                <Key label="."  sub="decimal"  onPress={pressDot}/>
+                <Key label="0"  onPress={() => pressDigit(0)}/>
+                <Key label="/"  sub="fraction" onPress={pressSlash}/>
+                <Key label="="  orange onPress={pressEquals}/>
+              </div>
+              <div style={{ marginTop:7 }}>
+                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:8, border:"none", background:"#d8d5cf", boxShadow:"0 4px 0 #b0ada6", color:"#888", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation" }}>
+                  SPACE
+                </button>
+              </div>
+            </div>
+
+            {/* History */}
+            {history.length > 0 && (
+              <div style={{ borderTop:"1px solid #c8c4bc", padding:"12px 12px 16px", background:"#eae7e1", borderRadius:"0 0 20px 20px" }}>
+                <div style={{ fontSize:7.5, color:"#aaa", fontWeight:700, letterSpacing:2.5, marginBottom:9 }}>HISTORY · TAP TO RECALL</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                  {history.map((h, i) => (
+                    <button key={h.id} onClick={() => recallHistory(h)} style={{ display:"flex", alignItems:"center", padding:"8px 10px", background:"#f0ede8", borderRadius:6, border:"1px solid #ddd9d2", opacity: Math.max(0.5, 1-i*0.15), gap:8, cursor:"pointer", width:"100%", textAlign:"left", touchAction:"manipulation" }}>
+                      <span style={{ fontSize:11, color:"#666", fontFamily:"'DM Mono',monospace", flex:1 }}>{h.expr}</span>
+                      <span style={{ fontSize:9, color:"#bbb" }}>=</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:"#1a1a1a", fontFamily:"'DM Mono',monospace" }}>{h.result}</span>
+                      <span style={{ fontSize:10, color:"#888", fontFamily:"'DM Mono',monospace" }}>{h.cm}cm</span>
+                      {!h.exact && <span style={{ fontSize:9, color:"#e8621a", fontWeight:700 }}>≈</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {history.length === 0 && (
+              <div style={{ padding:"6px 0 12px", display:"flex", gap:3, justifyContent:"center" }}>
+                {Array.from({length:14},(_,i)=><div key={i} style={{ width:14, height:3, background:"#dddad4", borderRadius:2 }}/>)}
+              </div>
+            )}
+
+            {/* Copyright */}
+            <div style={{ padding:"0 0 14px", textAlign:"center", fontSize:9, color:"#bbb", fontWeight:600, letterSpacing:1.5, fontFamily:"'DM Sans',sans-serif" }}>
+              © 2026 Haeone Son
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  </script>
+</body>
+</html>
