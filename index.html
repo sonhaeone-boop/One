@@ -8,7 +8,16 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
-    html,body{background:#c8c5be;min-height:100%;-webkit-tap-highlight-color:transparent;}
+    html,body{
+      background:#d4d0c4;
+      height:100%;
+      overflow:hidden;
+      position:fixed;
+      inset:0;
+      width:100%;
+      overscroll-behavior:none;
+      -webkit-tap-highlight-color:transparent;
+    }
     button{-webkit-tap-highlight-color:transparent;font-family:'DM Sans',sans-serif;}
   </style>
 </head>
@@ -111,26 +120,22 @@
     }
 
     /* ── Key component ────────────────────────────────── */
-    function Key({ label, sub, onPress, dark, orange, muted }) {
+    function Key({ label, sub, onPress, dark, orange, muted, blue }) {
       const [pressed, setPressed] = useState(false);
-      const bg     = orange ? "#e8621a" : dark ? "#2a2a2a" : muted ? "#d8d5cf" : "#e2dfd9";
-      const fg     = (dark || orange) ? "#f0ede8" : muted ? "#1a1a1a" : "#1a1a1a";
-      const shadow = pressed
-        ? "inset 0 2px 5px rgba(0,0,0,0.35)"
-        : orange ? "0 4px 0 #a84810"
-        : dark    ? "0 4px 0 #111"
-        : muted   ? "0 4px 0 #b0ada6"
-        : "0 4px 0 #b5b2ab";
+      const restBg  = orange ? "#cb8c4e" : blue ? "#587999" : dark ? "#47586b" : muted ? "#b1b5a9" : "#b1b5a9";
+      const pressBg = orange ? "#865c33" : blue ? "#47617b" : dark ? "#384554" : muted ? "#919685" : "#919685";
+      const fg      = (muted || (!dark && !orange && !blue)) ? "#47586b" : "#F3F1E6";
       return (
         <button
           onPointerDown={() => { setPressed(true); onPress(); }}
           onPointerUp={() => setPressed(false)}
           onPointerLeave={() => setPressed(false)}
           style={{
-            borderRadius:8, border:"none", cursor:"pointer",
-            background:bg, color:fg, boxShadow:shadow,
-            transform: pressed ? "translateY(4px)" : "translateY(0)",
-            transition:"transform 0.05s, box-shadow 0.05s",
+            borderRadius:7, border:"none", cursor:"pointer",
+            background: pressed ? pressBg : restBg,
+            color:fg,
+            transform: pressed ? "scale(0.96)" : "scale(1)",
+            transition:"transform 0.05s, background 0.05s",
             display:"flex", flexDirection:"column",
             alignItems:"center", justifyContent:"center",
             userSelect:"none", WebkitUserSelect:"none",
@@ -139,7 +144,7 @@
           }}
         >
           <span style={{ fontSize: label.length > 2 ? 14 : 22, fontWeight:700, fontFamily:"'DM Sans',sans-serif", lineHeight:1 }}>{label}</span>
-          {sub && <span style={{ fontSize:8.5, opacity:0.5, fontWeight:600, letterSpacing:0.3, lineHeight:1 }}>{sub}</span>}
+          {sub && <span style={{ fontSize:8.5, opacity:0.6, fontWeight:600, letterSpacing:0.3, lineHeight:1 }}>{sub}</span>}
         </button>
       );
     }
@@ -309,28 +314,31 @@
 
 
       return (
-        <div style={{ minHeight:"100vh", background:"#c8c5be", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 10px 48px", fontFamily:"'DM Sans',sans-serif" }}>
-          <div style={{ width:"100%", maxWidth:400, background:"#f0ede8", borderRadius:20, boxShadow:"inset 0 1px 0 rgba(255,255,255,0.85), 0 20px 60px rgba(0,0,0,0.28), 0 2px 0 #a8a5a0" }}>
+        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#d4d0c4", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"24px 10px 48px", fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ width:"100%", maxWidth:400, background:"#c6c5b5", borderRadius:20, overflow:"hidden" }}>
 
             {/* Header */}
-            <div style={{ padding:"12px 18px 8px", display:"flex", justifyContent:"space-between" }}>
-              <div style={{ fontSize:7.5, color:"#aaa", fontWeight:700, letterSpacing:3 }}>PATTERN RULER CALC</div>
-              <div style={{ fontSize:7.5, color:"#ccc", fontWeight:600, letterSpacing:2 }}>1⁄16″</div>
+            <div style={{ padding:"16px 18px 10px", display:"flex", alignItems:"center" }}>
+              <img
+                src="data:image/png;base64,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"
+                alt="Reunited One"
+                style={{ height:9, width:"auto", display:"block" }}
+              />
             </div>
 
             {/* LCD */}
-            <div style={{ margin:"0 12px 14px", background:"#dad7d0", borderRadius:10, padding:"14px 16px", height:138, border:"1px solid #c4c1b9", boxShadow:"inset 0 2px 5px rgba(0,0,0,0.08)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-              <div style={{ fontSize:15, color:"#888", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
+            <div style={{ margin:"0 12px 14px", background:"#b2b2a3", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #95948a", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+              <div style={{ fontSize:15, color:"#737f8e", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
                 {exprLine || "\u00A0"}
               </div>
               <div style={{ textAlign:"right" }}>
-                <span style={{ fontSize:36, fontWeight:700, color:"#1a1a1a", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
+                <span style={{ fontSize:36, fontWeight:700, color:"#47586b", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
                   {showingResult
                     ? fmtFrac(toT(result))
                     : typingFraction
                       ? <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>
                           {committedPrefix && <span>{committedPrefix}</span>}
-                          <TypedDisplay input={input} color="#1a1a1a"/>
+                          <TypedDisplay input={input} color="#47586b"/>
                         </span>
                       : hasExprContent
                         ? <span style={{ fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>{mainExpr}</span>
@@ -338,11 +346,11 @@
                 </span>
               </div>
               <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
-                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#c44f12", fontWeight:700 }}>≈</span>}
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#777" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
+                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#bd7c37", fontWeight:700 }}>≈</span>}
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#606e7e" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
                   {liveInches != null ? (liveT/16).toFixed(3)+"″" : "0.000″"}
                 </span>
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#555" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#536070" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
                   {liveInches != null ? (liveT/16*CM_PER_INCH).toFixed(2)+" cm" : "0.00 cm"}
                 </span>
               </div>
@@ -354,26 +362,26 @@
                 <Key label="⌫"  dark  onPress={pressBack}/>
                 <Key label="AC" dark  onPress={pressAC}/>
                 <Key label={unit === "inch" ? "inch" : "cm"} sub="tap: unit" orange={unit === "cm"} muted={unit === "inch"} onPress={toggleUnit}/>
-                <Key label="÷"  dark  onPress={() => pressOp("÷")}/>
+                <Key label="÷"  blue  onPress={() => pressOp("÷")}/>
                 <Key label="7"  onPress={() => pressDigit(7)}/>
                 <Key label="8"  onPress={() => pressDigit(8)}/>
                 <Key label="9"  onPress={() => pressDigit(9)}/>
-                <Key label="×"  dark  onPress={() => pressOp("×")}/>
+                <Key label="×"  blue  onPress={() => pressOp("×")}/>
                 <Key label="4"  onPress={() => pressDigit(4)}/>
                 <Key label="5"  onPress={() => pressDigit(5)}/>
                 <Key label="6"  onPress={() => pressDigit(6)}/>
-                <Key label="−"  dark  onPress={() => pressOp("−")}/>
+                <Key label="−"  blue  onPress={() => pressOp("−")}/>
                 <Key label="1"  onPress={() => pressDigit(1)}/>
                 <Key label="2"  onPress={() => pressDigit(2)}/>
                 <Key label="3"  onPress={() => pressDigit(3)}/>
-                <Key label="+"  dark  onPress={() => pressOp("+")}/>
+                <Key label="+"  blue  onPress={() => pressOp("+")}/>
                 <Key label="."  sub="decimal"  onPress={pressDot}/>
                 <Key label="0"  onPress={() => pressDigit(0)}/>
                 <Key label="/"  sub="fraction" onPress={pressSlash}/>
                 <Key label="="  orange onPress={pressEquals}/>
               </div>
               <div style={{ marginTop:7 }}>
-                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:8, border:"none", background:"#d8d5cf", boxShadow:"0 4px 0 #b0ada6", color:"#888", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation" }}>
+                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:7, border:"none", background:"#b1b5a9", color:"#47586b", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation" }}>
                   SPACE
                 </button>
               </div>
@@ -381,37 +389,149 @@
 
             {/* History */}
             {history.length > 0 && (
-              <div style={{ borderTop:"1px solid #c8c4bc", padding:"12px 12px 16px", background:"#eae7e1", borderRadius:"0 0 20px 20px" }}>
-                <div style={{ fontSize:7.5, color:"#aaa", fontWeight:700, letterSpacing:2.5, marginBottom:9 }}>HISTORY · TAP TO RECALL</div>
+              <div style={{ borderTop:"1px solid #95948a", padding:"12px 12px 16px", background:"#b2b2a3" }}>
+                <div style={{ fontSize:7.5, color:"#737f8e", fontWeight:700, letterSpacing:2.5, marginBottom:9 }}>HISTORY · TAP TO RECALL</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                   {history.map((h, i) => (
-                    <button key={h.id} onClick={() => recallHistory(h)} style={{ display:"flex", alignItems:"center", padding:"8px 10px", background:"#f0ede8", borderRadius:6, border:"1px solid #ddd9d2", opacity: Math.max(0.5, 1-i*0.15), gap:8, cursor:"pointer", width:"100%", textAlign:"left", touchAction:"manipulation" }}>
-                      <span style={{ fontSize:11, color:"#666", fontFamily:"'DM Mono',monospace", flex:1 }}>{h.expr}</span>
-                      <span style={{ fontSize:9, color:"#bbb" }}>=</span>
-                      <span style={{ fontSize:13, fontWeight:700, color:"#1a1a1a", fontFamily:"'DM Mono',monospace" }}>{h.result}</span>
-                      <span style={{ fontSize:10, color:"#888", fontFamily:"'DM Mono',monospace" }}>{h.cm}cm</span>
-                      {!h.exact && <span style={{ fontSize:9, color:"#e8621a", fontWeight:700 }}>≈</span>}
+                    <button key={h.id} onClick={() => recallHistory(h)} style={{ display:"flex", alignItems:"center", padding:"8px 10px", background:"#b1b5a9", borderRadius:6, border:"1px solid #8f9389", opacity: Math.max(0.5, 1-i*0.15), gap:8, cursor:"pointer", width:"100%", textAlign:"left", touchAction:"manipulation" }}>
+                      <span style={{ fontSize:11, color:"#606e7e", fontFamily:"'DM Mono',monospace", flex:1 }}>{h.expr}</span>
+                      <span style={{ fontSize:9, color:"#737f8e" }}>=</span>
+                      <span style={{ fontSize:13, fontWeight:700, color:"#47586b", fontFamily:"'DM Mono',monospace" }}>{h.result}</span>
+                      <span style={{ fontSize:10, color:"#737f8e", fontFamily:"'DM Mono',monospace" }}>{h.cm}cm</span>
+                      {!h.exact && <span style={{ fontSize:9, color:"#bd7c37", fontWeight:700 }}>≈</span>}
                     </button>
                   ))}
                 </div>
               </div>
             )}
-            {history.length === 0 && (
-              <div style={{ padding:"6px 0 12px", display:"flex", gap:3, justifyContent:"center" }}>
-                {Array.from({length:14},(_,i)=><div key={i} style={{ width:14, height:3, background:"#dddad4", borderRadius:2 }}/>)}
-              </div>
-            )}
 
-            {/* Copyright */}
-            <div style={{ padding:"0 0 14px", textAlign:"center", fontSize:9, color:"#bbb", fontWeight:600, letterSpacing:1.5, fontFamily:"'DM Sans',sans-serif" }}>
-              © 2026 Haeone Son
+            {/* Footer */}
+            <div style={{ padding:"14px 0 16px", textAlign:"center" }}>
+              <a
+                href="https://reunitedone.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize:9, color:"#1a1a1a", fontWeight:600, letterSpacing:1.5, fontFamily:"Georgia, 'Times New Roman', serif", textDecoration:"none" }}
+              >
+                Built by Reunited One
+              </a>
             </div>
           </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+    /* ── Lock screen ──────────────────────────────────── */
+    const AUTH_KEY = "prc_auth_v1";
+    const APP_PASSWORD = "onepattern";
+
+    function LockScreen({ onUnlock, fadingOut }) {
+      const [value, setValue] = useState("");
+      const [shake, setShake] = useState(false);
+
+      function trySubmit() {
+        if (value === APP_PASSWORD) {
+          onUnlock();
+        } else {
+          setShake(true);
+          setTimeout(() => setShake(false), 400);
+          setValue("");
+        }
+      }
+
+      return (
+        <div style={{
+          height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch",
+          background:"#d4d0c4",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          padding:"24px", fontFamily:"'DM Sans',sans-serif",
+          opacity: fadingOut ? 0 : 1,
+          transition:"opacity 0.4s ease",
+        }}>
+          <div style={{
+            width:"100%", maxWidth:320,
+            background:"#c6c5b5", borderRadius:20,
+            padding:"40px 28px",
+            display:"flex", flexDirection:"column", alignItems:"center", gap:18,
+            animation: shake ? "shake 0.4s" : "none",
+          }}>
+            <img
+              src="data:image/png;base64,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"
+              alt="Reunited One"
+              style={{ height:11, width:"auto", display:"block" }}
+            />
+
+            <input
+              type="password"
+              autoFocus
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") trySubmit(); }}
+              placeholder="Enter Password"
+              style={{
+                width:"100%", textAlign:"center",
+                background:"#b2b2a3", border:"1px solid #95948a",
+                borderRadius:8, padding:"14px 16px",
+                fontSize:16, fontWeight:600, color:"#47586b",
+                fontFamily:"'DM Mono',monospace", letterSpacing:2,
+                outline:"none",
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={trySubmit}
+              onPointerDown={e => e.currentTarget.style.transform = "scale(0.97)"}
+              onPointerUp={e => e.currentTarget.style.transform = "scale(1)"}
+              onPointerLeave={e => e.currentTarget.style.transform = "scale(1)"}
+              style={{
+                width:"100%", height:48, borderRadius:7, border:"none",
+                background:"#cb8c4e",
+                color:"#F3F1E6", fontSize:13, fontWeight:700, letterSpacing:2.5,
+                cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                touchAction:"manipulation", WebkitTapHighlightColor:"transparent",
+                transition:"transform 0.05s",
+              }}
+            >
+              UNLOCK
+            </button>
+          </div>
+
+          <style>{`
+            @keyframes shake {
+              10%, 90% { transform: translateX(-2px); }
+              20%, 80% { transform: translateX(4px); }
+              30%, 50%, 70% { transform: translateX(-8px); }
+              40%, 60% { transform: translateX(8px); }
+            }
+          `}</style>
+        </div>
+      );
+    }
+
+    function Root() {
+      const [authed, setAuthed] = useState(() => {
+        try { return localStorage.getItem(AUTH_KEY) === "true"; }
+        catch (e) { return false; }
+      });
+      const [fadingOut, setFadingOut] = useState(false);
+
+      function handleUnlock() {
+        try { localStorage.setItem(AUTH_KEY, "true"); } catch (e) {}
+        setFadingOut(true);
+        setTimeout(() => setAuthed(true), 380);
+      }
+
+      if (!authed) return <LockScreen onUnlock={handleUnlock} fadingOut={fadingOut}/>;
+      return (
+        <div style={{ animation:"fadeIn 0.4s ease" }}>
+          <style>{`@keyframes fadeIn { from{opacity:0} to{opacity:1} }`}</style>
+          <App/>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
   </script>
 </body>
 </html>
