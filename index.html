@@ -9,7 +9,7 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{
-      background:#f1e9d0;
+      background:#f4ecd5;
       height:100%;
       overflow:hidden;
       position:fixed;
@@ -126,9 +126,9 @@
     /* ── Key component ────────────────────────────────── */
     function Key({ label, sub, onPress, dark, orange, muted, blue }) {
       const [pressed, setPressed] = useState(false);
-      const restBg  = orange ? "#deac74" : blue ? "#7c9ab2" : dark ? "#627b92" : muted ? "#d0cfc0" : "#d0cfc0";
-      const pressBg = orange ? "#bf7e3b" : blue ? "#5f83a3" : dark ? "#56697b" : muted ? "#b3b49e" : "#b3b49e";
-      const fg      = (muted || (!dark && !orange && !blue)) ? "#3a4852" : "#f1ecdc";
+      const restBg  = orange ? "#e5b177" : blue ? "#7da0bb" : dark ? "#61809d" : muted ? "#d6d5c4" : "#d6d5c4";
+      const pressBg = orange ? "#cb8339" : blue ? "#5f88ad" : dark ? "#566e85" : muted ? "#babba1" : "#babba1";
+      const fg      = (muted || (!dark && !orange && !blue)) ? "#3a4b58" : "#f1ecdc";
       const shadow  = pressed
         ? "inset 0 1px 3px rgba(0,0,0,0.25)"
         : "0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
@@ -295,8 +295,8 @@
       }
 
       return (
-        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#f1e9d0", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"12px 10px 12px", fontFamily:"'DM Sans',sans-serif" }}>
-          <div style={{ width:"100%", maxWidth:400, background:"#e0ddcd", borderRadius:20, overflow:"hidden", boxShadow:"0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)" }}>
+        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#f4ecd5", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"12px 10px 12px", fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ width:"100%", maxWidth:400, background:"#e6e3d1", borderRadius:20, overflow:"hidden", boxShadow:"0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)" }}>
 
             {/* Header */}
             <div style={{ padding:"16px 18px 10px", display:"flex", alignItems:"center" }}>
@@ -308,18 +308,18 @@
             </div>
 
             {/* LCD */}
-            <div style={{ margin:"0 12px 14px", background:"#cfcdba", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #b6b2a2", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-              <div style={{ fontSize:15, color:"#939ea4", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
+            <div style={{ margin:"0 12px 14px", background:"#d6d3be", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #bdb8a6", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+              <div style={{ fontSize:15, color:"#96a4ab", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
                 {exprLine || "\u00A0"}
               </div>
               <div style={{ textAlign:"right" }}>
-                <span style={{ fontSize:36, fontWeight:700, color:"#3a4852", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
+                <span style={{ fontSize:36, fontWeight:700, color:"#3a4b58", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
                   {showingResult
                     ? fmtFrac(toT(result))
                     : typingFraction
                       ? <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>
                           {committedPrefix && <span>{committedPrefix}</span>}
-                          <TypedDisplay input={input} color="#3a4852"/>
+                          <TypedDisplay input={input} color="#3a4b58"/>
                         </span>
                       : hasExprContent
                         ? <span style={{ fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>{mainExpr}</span>
@@ -327,11 +327,11 @@
                 </span>
               </div>
               <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
-                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#d89c59", fontWeight:700 }}>≈</span>}
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#7d8c99" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
+                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#e0a15b", fontWeight:700 }}>≈</span>}
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#7f91a1" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
                   {liveInches != null ? (liveT/16).toFixed(3)+"″" : "0.000″"}
                 </span>
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#6c7f92" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#6c849c" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
                   {liveInches != null ? (liveT/16*CM_PER_INCH).toFixed(2)+" cm" : "0.00 cm"}
                 </span>
               </div>
@@ -362,7 +362,7 @@
                 <Key label="="  orange onPress={pressEquals}/>
               </div>
               <div style={{ marginTop:7 }}>
-                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:7, border:"none", background:"#d0cfc0", color:"#3a4852", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation", boxShadow:"0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35)" }}>
+                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:7, border:"none", background:"#d6d5c4", color:"#3a4b58", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation", boxShadow:"0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35)" }}>
                   SPACE
                 </button>
               </div>
