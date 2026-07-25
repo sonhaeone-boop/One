@@ -19,6 +19,10 @@
       -webkit-tap-highlight-color:transparent;
     }
     button{-webkit-tap-highlight-color:transparent;font-family:'DM Sans',sans-serif;}
+    .backspace-glyph{font-size:22px;}
+    @media (pointer:coarse){
+      .backspace-glyph{font-size:34px;}
+    }
   </style>
 </head>
 <body>
@@ -146,7 +150,7 @@
             height:"100%", minHeight:62, gap:2,
           }}
         >
-          <span style={{ fontSize: (label.length > 2 && label !== "⌫") ? 14 : 22, fontWeight:700, fontFamily:"'DM Sans',sans-serif", lineHeight:1 }}>{label}</span>
+          <span className={label === "⌫" ? "backspace-glyph" : undefined} style={{ fontSize: label === "⌫" ? undefined : (label.length > 2 ? 14 : 22), fontWeight:700, fontFamily:"'DM Sans',sans-serif", lineHeight:1 }}>{label}</span>
           {sub && <span style={{ fontSize:8.5, opacity:0.6, fontWeight:600, letterSpacing:0.3, lineHeight:1 }}>{sub}</span>}
         </button>
       );
