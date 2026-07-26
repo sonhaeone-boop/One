@@ -9,7 +9,7 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{
-      background:#f4ecd5;
+      background:#f1e5c4;
       height:100%;
       overflow:hidden;
       position:fixed;
@@ -126,9 +126,9 @@
     /* ── Key component ────────────────────────────────── */
     function Key({ label, sub, onPress, dark, orange, muted, blue }) {
       const [pressed, setPressed] = useState(false);
-      const restBg  = orange ? "#e5b177" : blue ? "#7da0bb" : dark ? "#61809d" : muted ? "#d6d5c4" : "#d6d5c4";
-      const pressBg = orange ? "#cb8339" : blue ? "#5f88ad" : dark ? "#566e85" : muted ? "#babba1" : "#babba1";
-      const fg      = (muted || (!dark && !orange && !blue)) ? "#3a4b58" : "#f1ecdc";
+      const restBg  = orange ? "#e3a55f" : blue ? "#6792b2" : dark ? "#54718b" : muted ? "#c8c7ae" : "#c8c7ae";
+      const pressBg = orange ? "#bc762f" : blue ? "#4e799f" : dark ? "#495f73" : muted ? "#abad8b" : "#abad8b";
+      const fg      = (muted || (!dark && !orange && !blue)) ? "#354755" : "#f1ecdc";
       const shadow  = pressed
         ? "inset 0 1px 3px rgba(0,0,0,0.25)"
         : "0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
@@ -177,11 +177,34 @@
       return acc;
     }
 
-    // Build the display string for a token stream
+    // Build the display string for a token stream (plain text — used for the small grey line)
     function tokensToStr(tokens, pendingInput, pendingUnit) {
-      const parts = tokens.map(t => t.type === "op" ? t.op : t.label);
-      if (pendingInput) parts.push(pendingInput + (pendingUnit === "cm" ? "cm" : "\""));
+      const parts = tokens.map(t => t.type === "op" ? t.op : (t.label + (t.unit === "cm" ? "cm" : "″")));
+      if (pendingInput) parts.push(pendingInput + (pendingUnit === "cm" ? "cm" : "″"));
       return parts.join("  ");
+    }
+
+    // Build JSX nodes for a token stream with the unit mark shown smaller than the digits —
+    // used for the big main display.
+    function TokenDisplay({ tokens, pendingInput, pendingUnit }) {
+      const nodes = [];
+      tokens.forEach((t, i) => {
+        if (i > 0) nodes.push(<span key={"sep"+i} style={{ margin:"0 4px" }}></span>);
+        if (t.type === "op") {
+          nodes.push(<span key={i}>{t.op}</span>);
+        } else {
+          nodes.push(
+            <span key={i}>{t.label}<span style={{ fontSize:"0.45em", verticalAlign:"baseline", lineHeight:0, position:"relative", top: t.unit === "cm" ? "0.1em" : undefined, verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span></span>
+          );
+        }
+      });
+      if (pendingInput) {
+        if (tokens.length > 0) nodes.push(<span key="sep-pending" style={{ margin:"0 4px" }}></span>);
+        nodes.push(
+          <span key="pending">{pendingInput}<span style={{ fontSize:"0.45em", lineHeight:0, position:"relative", top: pendingUnit === "cm" ? "0.1em" : undefined, verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span></span>
+        );
+      }
+      return <>{nodes}</>;
     }
 
     /* ── Main App ─────────────────────────────────────── */
@@ -213,8 +236,6 @@
       // after "=" show just the result; empty shows "0".
       const mainExpr = tokensToStr(tokens, input, unit);
       const hasExprContent = tokens.length > 0 || isTyping;
-      // Committed tokens as a plain string prefix (everything except the number being typed now)
-      const committedPrefix = tokens.map(t => t.type === "op" ? t.op : t.label).join("  ");
       // Whether the value being typed is a fraction (so we render it stacked with · placeholders)
       const typingFraction = isTyping && unit === "inch" && (input.includes("/") || input.includes(" "));
 
@@ -224,15 +245,21 @@
       // helper: make a number token from current input
       function makeNumToken() {
         if (inputInches == null) return null;
-        const label = unit === "cm" ? `${rawInputVal}cm` : fmtFracExpr(toT(inputInches));
-        return { type:"num", inches: inputInches, label };
+        const label = unit === "cm" ? `${rawInputVal}` : fmtFracExpr(toT(inputInches));
+        return { type:"num", inches: inputInches, label, unit };
       }
 
+      // Count committed operators — block new number entry if already at 7 ops
+      const opCount = tokens.filter(t => t.type === "op").length;
+      const atOpLimit = opCount >= 7 && input === "" && tokens.length > 0 && tokens[tokens.length-1].type === "op";
+
       function pressDigit(d) {
+        if (atOpLimit) return;
         if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); setInput(String(d)); return; }
         setInput(v => v + String(d));
       }
       function pressDot() {
+        if (atOpLimit) return;
         if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); setInput("0."); return; }
         if (!input.includes(".")) setInput(v => (v || "0") + ".");
       }
@@ -252,20 +279,21 @@
         setUnit(u => u === "inch" ? "cm" : "inch");
       }
       function pressOp(newOp) {
-        // If a result is showing, continue calculating from it
         if (showingResult) {
-          setTokens([{ type:"num", inches: result, label: fmtFracExpr(toT(result)) }, { type:"op", op:newOp }]);
+          setTokens([{ type:"num", inches: result, label: fmtFracExpr(toT(result)), unit:"inch" }, { type:"op", op:newOp }]);
           setResult(null); setResultExpr(null); setInput("");
           return;
         }
+        const currentOpCount = tokens.filter(t => t.type === "op").length;
         const numTok = makeNumToken();
         if (numTok) {
+          if (currentOpCount >= 7) return;
           setTokens(t => [...t, numTok, { type:"op", op:newOp }]);
           setInput("");
         } else if (tokens.length && tokens[tokens.length-1].type === "op") {
-          // replace trailing operator
           setTokens(t => [...t.slice(0,-1), { type:"op", op:newOp }]);
         } else if (tokens.length && tokens[tokens.length-1].type === "num") {
+          if (currentOpCount >= 7) return;
           setTokens(t => [...t, { type:"op", op:newOp }]);
         }
       }
@@ -295,8 +323,8 @@
       }
 
       return (
-        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#f4ecd5", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"12px 10px 12px", fontFamily:"'DM Sans',sans-serif" }}>
-          <div style={{ width:"100%", maxWidth:400, background:"#e6e3d1", borderRadius:20, overflow:"hidden", boxShadow:"0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)" }}>
+        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#f1e5c4", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"12px 10px 12px", fontFamily:"'DM Sans',sans-serif" }}>
+          <div style={{ width:"100%", maxWidth:400, background:"#dad6b9", borderRadius:20, overflow:"hidden", boxShadow:"0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)" }}>
 
             {/* Header */}
             <div style={{ padding:"16px 18px 10px", display:"flex", alignItems:"center" }}>
@@ -308,30 +336,30 @@
             </div>
 
             {/* LCD */}
-            <div style={{ margin:"0 12px 14px", background:"#d6d3be", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #bdb8a6", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-              <div style={{ fontSize:15, color:"#96a4ab", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
+            <div style={{ margin:"0 12px 14px", background:"#c9c5a7", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #afa891", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+              <div style={{ fontSize:15, color:"#8599a3", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
                 {exprLine || "\u00A0"}
               </div>
               <div style={{ textAlign:"right" }}>
-                <span style={{ fontSize:36, fontWeight:700, color:"#3a4b58", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
+                <span style={{ fontSize:36, fontWeight:700, color:"#354755", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
                   {showingResult
                     ? fmtFrac(toT(result))
                     : typingFraction
                       ? <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>
-                          {committedPrefix && <span>{committedPrefix}</span>}
-                          <TypedDisplay input={input} color="#3a4b58"/>
+                          {tokens.length > 0 && <span><TokenDisplay tokens={tokens} pendingInput="" pendingUnit={unit}/></span>}
+                          <span><TypedDisplay input={input} color="#354755"/><span style={{ fontSize:"0.45em", verticalAlign:"super", lineHeight:0 }}>″</span></span>
                         </span>
                       : hasExprContent
-                        ? <span style={{ fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>{mainExpr}</span>
+                        ? <span style={{ fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}><TokenDisplay tokens={tokens} pendingInput={input} pendingUnit={unit}/></span>
                         : "0"}
                 </span>
               </div>
               <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
-                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#e0a15b", fontWeight:700 }}>≈</span>}
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#7f91a1" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
+                {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#df9748", fontWeight:700 }}>≈</span>}
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#6d859a" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
                   {liveInches != null ? (liveT/16).toFixed(3)+"″" : "0.000″"}
                 </span>
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#6c849c" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#5d7792" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
                   {liveInches != null ? (liveT/16*CM_PER_INCH).toFixed(2)+" cm" : "0.00 cm"}
                 </span>
               </div>
@@ -362,7 +390,7 @@
                 <Key label="="  orange onPress={pressEquals}/>
               </div>
               <div style={{ marginTop:7 }}>
-                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:7, border:"none", background:"#d6d5c4", color:"#3a4b58", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation", boxShadow:"0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35)" }}>
+                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:7, border:"none", background:"#c8c7ae", color:"#354755", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation", boxShadow:"0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35)" }}>
                   SPACE
                 </button>
               </div>
