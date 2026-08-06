@@ -4,8 +4,6 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Pattern Ruler Calc</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{
@@ -18,7 +16,7 @@
       overscroll-behavior:none;
       -webkit-tap-highlight-color:transparent;
     }
-    button{-webkit-tap-highlight-color:transparent;font-family:'DM Sans',sans-serif;}
+    button{-webkit-tap-highlight-color:transparent;font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;}
     .backspace-glyph{font-size:22px;}
     @media (pointer:coarse){
       .backspace-glyph{font-size:34px;}
@@ -76,6 +74,34 @@
       if (r === 0) return `${w}`;
       const g = gcd(r, 16);
       return w > 0 ? `${w} ${r/g}/${16/g}` : `${r/g}/${16/g}`;
+    }
+
+    /* ── Small expression line (grey, top of LCD) ─────── */
+    function ExprLine({ tokens, pendingInput, pendingUnit, resultExpr, showingResult }) {
+      if (showingResult && resultExpr) {
+        return <span style={{ fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>{resultExpr}</span>;
+      }
+      const items = [];
+      tokens.forEach((t, i) => {
+        if (t.type === "op") {
+          items.push(<span key={i}>{t.op}</span>);
+        } else {
+          items.push(
+            <span key={i}>{t.label}<span style={{ fontSize:"0.65em", verticalAlign: t.unit === "cm" ? "baseline" : "super", position:"relative", top: t.unit === "cm" ? "0.35em" : undefined }}>{t.unit === "cm" ? "cm" : "″"}</span></span>
+          );
+        }
+      });
+      if (pendingInput) {
+        items.push(
+          <span key="pending">{pendingInput}<span style={{ fontSize:"0.65em", verticalAlign: pendingUnit === "cm" ? "baseline" : "super", position:"relative", top: pendingUnit === "cm" ? "0.35em" : undefined }}>{pendingUnit === "cm" ? "cm" : "″"}</span></span>
+        );
+      }
+      if (items.length === 0) return <span>&nbsp;</span>;
+      return (
+        <span style={{ display:"inline-flex", alignItems:"baseline", gap:"0.3em", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+          {items}
+        </span>
+      );
     }
 
     function calcOp(a, op, b) {
@@ -150,7 +176,7 @@
             height:"100%", minHeight:62, gap:2,
           }}
         >
-          <span className={label === "⌫" ? "backspace-glyph" : undefined} style={{ fontSize: label === "⌫" ? undefined : (label.length > 2 ? 14 : 22), fontWeight:700, fontFamily:"'DM Sans',sans-serif", lineHeight:1 }}>{label}</span>
+          <span className={label === "⌫" ? "backspace-glyph" : undefined} style={{ fontSize: label === "⌫" ? undefined : (label.length > 2 ? 14 : 22), fontWeight:700, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", lineHeight:1 }}>{label}</span>
           {sub && <span style={{ fontSize:8.5, opacity:0.6, fontWeight:600, letterSpacing:0.3, lineHeight:1 }}>{sub}</span>}
         </button>
       );
@@ -187,24 +213,26 @@
     // Build JSX nodes for a token stream with the unit mark shown smaller than the digits —
     // used for the big main display.
     function TokenDisplay({ tokens, pendingInput, pendingUnit }) {
-      const nodes = [];
+      const items = [];
       tokens.forEach((t, i) => {
-        if (i > 0) nodes.push(<span key={"sep"+i} style={{ margin:"0 4px" }}></span>);
         if (t.type === "op") {
-          nodes.push(<span key={i}>{t.op}</span>);
+          items.push(<span key={i}>{t.op}</span>);
         } else {
-          nodes.push(
-            <span key={i}>{t.label}<span style={{ fontSize:"0.45em", verticalAlign:"baseline", lineHeight:0, position:"relative", top: t.unit === "cm" ? "0.1em" : undefined, verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span></span>
+          items.push(
+            <span key={i}>{t.label}<span style={{ fontSize:"0.45em", verticalAlign: t.unit === "cm" ? "baseline" : "super", position:"relative", top: t.unit === "cm" ? "0.35em" : undefined }}>{t.unit === "cm" ? "cm" : "″"}</span></span>
           );
         }
       });
       if (pendingInput) {
-        if (tokens.length > 0) nodes.push(<span key="sep-pending" style={{ margin:"0 4px" }}></span>);
-        nodes.push(
-          <span key="pending">{pendingInput}<span style={{ fontSize:"0.45em", lineHeight:0, position:"relative", top: pendingUnit === "cm" ? "0.1em" : undefined, verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span></span>
+        items.push(
+          <span key="pending">{pendingInput}<span style={{ fontSize:"0.45em", verticalAlign: pendingUnit === "cm" ? "baseline" : "super", position:"relative", top: pendingUnit === "cm" ? "0.35em" : undefined }}>{pendingUnit === "cm" ? "cm" : "″"}</span></span>
         );
       }
-      return <>{nodes}</>;
+      return (
+        <span style={{ display:"inline-flex", alignItems:"baseline", gap:"0.3em" }}>
+          {items}
+        </span>
+      );
     }
 
     /* ── Main App ─────────────────────────────────────── */
@@ -323,7 +351,7 @@
       }
 
       return (
-        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#f1e5c4", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"12px 10px 12px", fontFamily:"'DM Sans',sans-serif" }}>
+        <div style={{ height:"100vh", overflowY:"auto", WebkitOverflowScrolling:"touch", background:"#f1e5c4", display:"flex", alignItems:"flex-start", justifyContent:"center", padding:"12px 10px 12px", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
           <div style={{ width:"100%", maxWidth:400, background:"#dad6b9", borderRadius:20, overflow:"hidden", boxShadow:"0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)" }}>
 
             {/* Header */}
@@ -337,17 +365,19 @@
 
             {/* LCD */}
             <div style={{ margin:"0 12px 14px", background:"#c9c5a7", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #afa891", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
-              <div style={{ fontSize:15, color:"#8599a3", fontWeight:600, fontFamily:"'DM Mono',monospace", textAlign:"right", lineHeight:1.2 }}>
-                {exprLine || "\u00A0"}
+              <div style={{ fontSize:15, color:"#8599a3", fontWeight:600, textAlign:"right", lineHeight:1.2 }}>
+                <ExprLine tokens={tokens} pendingInput={input} pendingUnit={unit} resultExpr={resultExpr} showingResult={showingResult}/>
               </div>
               <div style={{ textAlign:"right" }}>
-                <span style={{ fontSize:36, fontWeight:700, color:"#354755", fontFamily:"'DM Mono',monospace", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
+                <span style={{ fontSize:36, fontWeight:700, color:"#354755", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", letterSpacing:-0.5, lineHeight:1, display:"inline-flex", alignItems:"center", justifyContent:"flex-end", gap:6 }}>
                   {showingResult
                     ? fmtFrac(toT(result))
                     : typingFraction
-                      ? <span style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>
-                          {tokens.length > 0 && <span><TokenDisplay tokens={tokens} pendingInput="" pendingUnit={unit}/></span>}
-                          <span><TypedDisplay input={input} color="#354755"/><span style={{ fontSize:"0.45em", verticalAlign:"super", lineHeight:0 }}>″</span></span>
+                      ? <span style={{ display:"inline-flex", alignItems:"baseline", gap:"0.3em", fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}>
+                          {tokens.length > 0 && <TokenDisplay tokens={tokens} pendingInput="" pendingUnit={unit}/>}
+                          <span>
+                            <TypedDisplay input={input} color="#354755"/><span style={{ fontSize:"0.45em", verticalAlign: unit === "cm" ? "baseline" : "super", position:"relative", top: unit === "cm" ? "0.35em" : undefined }}>{unit === "cm" ? "cm" : "″"}</span>
+                          </span>
                         </span>
                       : hasExprContent
                         ? <span style={{ fontSize: mainExpr.length > 14 ? 20 : mainExpr.length > 9 ? 26 : 36 }}><TokenDisplay tokens={tokens} pendingInput={input} pendingUnit={unit}/></span>
@@ -356,10 +386,10 @@
               </div>
               <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
                 {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#df9748", fontWeight:700 }}>≈</span>}
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#6d859a" : "transparent", fontWeight:600, fontFamily:"'DM Mono',monospace" }}>
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#6d859a" : "transparent", fontWeight:600, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
                   {liveInches != null ? (liveT/16).toFixed(3)+"″" : "0.000″"}
                 </span>
-                <span style={{ fontSize:10.5, color: liveInches != null ? "#5d7792" : "transparent", fontWeight:700, fontFamily:"'DM Mono',monospace" }}>
+                <span style={{ fontSize:10.5, color: liveInches != null ? "#5d7792" : "transparent", fontWeight:700, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
                   {liveInches != null ? (liveT/16*CM_PER_INCH).toFixed(2)+" cm" : "0.00 cm"}
                 </span>
               </div>
@@ -399,13 +429,13 @@
             {/* Footer */}
             <div style={{ padding:"10px 18px 10px" }}>
               <div style={{ display:"flex", justifyContent:"center", gap:40, flexWrap:"wrap", marginBottom:10 }}>
-                <a href="https://reunitedone.com/pages/about" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"Georgia, 'Times New Roman', serif", textDecoration:"none" }}>About</a>
-                <a href="https://reunitedone.com/collections/men" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"Georgia, 'Times New Roman', serif", textDecoration:"none" }}>Shop</a>
-                <a href="https://www.instagram.com/reunited.one/" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"Georgia, 'Times New Roman', serif", textDecoration:"none" }}>Instagram</a>
-                <a href="https://www.youtube.com/@ReunitedOne" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"Georgia, 'Times New Roman', serif", textDecoration:"none" }}>Youtube</a>
+                <a href="https://reunitedone.com/pages/about" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", textDecoration:"none" }}>About</a>
+                <a href="https://reunitedone.com/collections/men" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", textDecoration:"none" }}>Shop</a>
+                <a href="https://www.instagram.com/reunited.one/" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", textDecoration:"none" }}>Instagram</a>
+                <a href="https://www.youtube.com/@ReunitedOne" target="_blank" rel="noopener noreferrer" style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", textDecoration:"none" }}>Youtube</a>
               </div>
               <div style={{ textAlign:"center" }}>
-                <span style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"Georgia, 'Times New Roman', serif" }}>Built by Reunited One</span>
+                <span style={{ fontSize:9, color:"#6b675c", fontWeight:400, letterSpacing:1, fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>Built by Reunited One</span>
               </div>
             </div>
           </div>
