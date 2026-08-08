@@ -88,7 +88,7 @@
         } else {
           items.push(
             <span key={i} style={{ whiteSpace:"nowrap" }}>
-              {t.label}<span style={{ fontSize:"0.65em", verticalAlign: t.unit === "cm" ? "sub" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
+              {t.label}<span style={{ fontSize:"0.65em", verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
             </span>
           );
         }
@@ -96,7 +96,7 @@
       if (pendingInput) {
         items.push(
           <span key="pending" style={{ whiteSpace:"nowrap" }}>
-            {pendingInput}<span style={{ fontSize:"0.65em", verticalAlign: pendingUnit === "cm" ? "sub" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
+            {pendingInput}<span style={{ fontSize:"0.65em", verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
           </span>
         );
       }
@@ -246,7 +246,7 @@
         } else {
           items.push(
             <span key={i} style={{ whiteSpace:"nowrap" }}>
-              {t.label}<span style={{ fontSize:"0.5em", verticalAlign: t.unit === "cm" ? "sub" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
+              {t.label}<span style={{ fontSize:"0.5em", verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
             </span>
           );
         }
@@ -265,7 +265,7 @@
                 <span>{den || "·"}</span>
               </span>
               {pendingUnit === "cm"
-                ? <span style={{ fontSize:11, verticalAlign:"sub" }}>cm</span>
+                ? <span style={{ fontSize:11, verticalAlign:"baseline" }}>cm</span>
                 : <span style={{ fontSize:11, position:"absolute", top:0, right:0, lineHeight:1 }}>″</span>
               }
             </span>
@@ -273,7 +273,7 @@
         } else {
           items.push(
             <span key="pending" style={{ whiteSpace:"nowrap" }}>
-              {pendingInput.trim()}<span style={{ fontSize:"0.5em", verticalAlign: pendingUnit === "cm" ? "sub" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
+              {pendingInput.trim()}<span style={{ fontSize:"0.5em", verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
             </span>
           );
         }
@@ -392,7 +392,7 @@
         setInput("");
       }
       function pressAC() {
-        setTokens([]); setInput(""); setResult(null); setResultExpr(null); setUnit("inch");
+        setTokens([]); setInput(""); setResult(null); setResultExpr(null);
       }
       function pressBack() {
         if (showingResult) { setResult(null); setResultExpr(null); return; }
