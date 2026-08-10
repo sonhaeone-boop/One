@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (gtag.js) 여기에 붙여넣기! -->
+  <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-D14FF07YRH"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-
     gtag('config', 'G-D14FF07YRH');
   </script>
-  
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Pattern Ruler Calc</title>
@@ -407,7 +405,19 @@
       function pressBack() {
         if (showingResult) { setResult(null); setResultExpr(null); return; }
         if (input !== "") { setInput(v => v.slice(0, -1)); return; }
-        // remove last token
+        // If last token is an op, remove it and restore the preceding number into input
+        if (tokens.length && tokens[tokens.length-1].type === "op") {
+          const prevNum = tokens[tokens.length-2];
+          if (prevNum && prevNum.type === "num") {
+            setTokens(t => t.slice(0, -2));
+            setInput(prevNum.label);
+            setUnit(prevNum.unit || "inch");
+          } else {
+            setTokens(t => t.slice(0, -1));
+          }
+          return;
+        }
+        // If last token is a number, remove it
         setTokens(t => t.slice(0, -1));
       }
 
