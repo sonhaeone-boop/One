@@ -29,6 +29,7 @@
     @media (pointer:coarse){
       .backspace-glyph{font-size:34px;}
     }
+    .no-scrollbar::-webkit-scrollbar{display:none;}
   </style>
 </head>
 <body>
@@ -39,7 +40,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useRef, useEffect } = React;
 
     /* ── Math helpers ─────────────────────────────────── */
     const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
@@ -250,7 +251,7 @@
       const items = [];
       tokens.forEach((t, i) => {
         if (t.type === "op") {
-          items.push(<span key={i} style={{ margin:"0 4px" }}>{t.op}</span>);
+          items.push(<span key={i} style={{ marginRight:"8px" }}>{t.op}</span>);
         } else {
           items.push(
             <span key={i} style={{ whiteSpace:"nowrap" }}>
@@ -293,7 +294,7 @@
       }
 
       return (
-        <span style={{ display:"inline-flex", alignItems:"center", gap:"0.1em", flexWrap:"nowrap" }}>
+        <span style={{ display:"inline-flex", alignItems:"center", gap:0, flexWrap:"nowrap" }}>
           {items}
         </span>
       );
@@ -306,6 +307,13 @@
       const [unit,     setUnit]     = useState("inch");
       const [result,   setResult]   = useState(null); // set only when = pressed (inches)
       const [resultExpr, setResultExpr] = useState(null); // frozen expression string after =
+      const mainDisplayRef = useRef(null);
+
+      useEffect(() => {
+        if (mainDisplayRef.current) {
+          mainDisplayRef.current.scrollLeft = mainDisplayRef.current.scrollWidth;
+        }
+      });
 
       const rawInputVal = parseNum(input);
       const inputInches = rawInputVal == null ? null
@@ -341,17 +349,11 @@
         return { type:"num", inches: inputInches, label, unit };
       }
 
-      // Count committed operators — block new number entry if already at 7 ops
-      const opCount = tokens.filter(t => t.type === "op").length;
-      const atOpLimit = opCount >= 7 && input === "" && tokens.length > 0 && tokens[tokens.length-1].type === "op";
-
       function pressDigit(d) {
-        if (atOpLimit) return;
         if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); setInput(String(d)); return; }
         setInput(v => v + String(d));
       }
       function pressDot() {
-        if (atOpLimit) return;
         if (showingResult) { setResult(null); setResultExpr(null); setTokens([]); setInput("0."); return; }
         if (!input.includes(".")) setInput(v => (v || "0") + ".");
       }
@@ -383,6 +385,7 @@
           setTokens(t => [...t, numTok, { type:"op", op:newOp }]);
           setInput("");
         } else if (tokens.length && tokens[tokens.length-1].type === "op") {
+          if (currentOpCount >= 7) return;
           setTokens(t => [...t.slice(0,-1), { type:"op", op:newOp }]);
         } else if (tokens.length && tokens[tokens.length-1].type === "num") {
           if (currentOpCount >= 7) return;
@@ -444,14 +447,16 @@
               <div style={{ fontSize:15, color:"#8599a3", fontWeight:600, textAlign:"right", lineHeight:1.2 }}>
                 <ExprLine tokens={tokens} pendingInput={input} pendingUnit={unit} resultExpr={resultExpr} showingResult={showingResult}/>
               </div>
-              <div style={{ textAlign:"right" }}>
-                <span style={{ fontSize:36, fontWeight:700, color:"#354755", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", letterSpacing:-0.5, lineHeight:1 }}>
-                  {showingResult
-                    ? fmtFrac(toT(result))
-                    : hasExprContent
-                      ? <TokenDisplay tokens={tokens} pendingInput={input} pendingUnit={unit}/>
-                      : "0"}
-                </span>
+              <div style={{ textAlign:"right", overflowX:"hidden" }}>
+                <div ref={mainDisplayRef} className="no-scrollbar" style={{ overflowX:"auto", whiteSpace:"nowrap", scrollbarWidth:"none", msOverflowStyle:"none" }}>
+                  <span style={{ fontSize:36, fontWeight:700, color:"#354755", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", letterSpacing:-0.5, lineHeight:1 }}>
+                    {showingResult
+                      ? fmtFrac(toT(result))
+                      : hasExprContent
+                        ? <TokenDisplay tokens={tokens} pendingInput={input} pendingUnit={unit}/>
+                        : "0"}
+                  </span>
+                </div>
               </div>
               <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
                 {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#df9748", fontWeight:700 }}>≈</span>}
