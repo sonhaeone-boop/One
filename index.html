@@ -264,13 +264,18 @@
         const hasFrac = pendingInput.includes("/") || (pendingInput.includes(" ") && !pendingInput.includes("."));
         if (hasFrac) {
           const { whole, num, den } = splitTyped(pendingInput);
+          const isMixed = !!whole;
+          const hasSlashChar = pendingInput.includes("/");
+          const numOpacity = isMixed && !num ? 0.2 : 1;
+          const lineOpacity = isMixed && !hasSlashChar ? 0.2 : 1;
+          const denOpacity = isMixed && !den ? 0.2 : 1;
           items.push(
             <span key="pending" style={{ display:"inline-flex", alignItems:"center", gap:4, position:"relative" }}>
               {whole && <span>{whole}</span>}
               <span style={{ display:"inline-flex", flexDirection:"column", alignItems:"center", lineHeight:1.1, fontWeight:700, fontSize:18, paddingRight: pendingUnit !== "cm" ? 10 : 0 }}>
-                <span>{num || "·"}</span>
-                <span style={{ width:"100%", height:1.5, background:"#354755", margin:"2px 0" }}/>
-                <span>{den || "·"}</span>
+                <span style={{ opacity:numOpacity }}>{num || "·"}</span>
+                <span style={{ width:"100%", height:1.5, background:"#354755", margin:"2px 0", opacity:lineOpacity }}/>
+                <span style={{ opacity:denOpacity }}>{den || "·"}</span>
               </span>
               {pendingUnit === "cm"
                 ? <span style={{ fontSize:11, verticalAlign:"baseline" }}>cm</span>
