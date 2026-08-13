@@ -254,8 +254,8 @@
           items.push(<span key={i} style={{ marginRight:"8px" }}>{t.op}</span>);
         } else {
           items.push(
-            <span key={i} style={{ whiteSpace:"nowrap" }}>
-              {t.label}<span style={{ fontSize:"0.5em", verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
+            <span key={i} style={{ whiteSpace:"nowrap", marginRight: t.unit === "cm" ? "6px" : 0 }}>
+              {t.label}<span style={{ fontSize:"0.4em", marginLeft: t.unit === "cm" ? "2px" : 0, verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
             </span>
           );
         }
@@ -265,11 +265,10 @@
         const hasFrac = pendingInput.includes("/") || (pendingInput.includes(" ") && !pendingInput.includes("."));
         if (hasFrac) {
           const { whole, num, den } = splitTyped(pendingInput);
-          const isMixed = !!whole;
           const hasSlashChar = pendingInput.includes("/");
-          const numOpacity = isMixed && !num ? 0.2 : 1;
-          const lineOpacity = isMixed && !hasSlashChar ? 0.2 : 1;
-          const denOpacity = isMixed && !den ? 0.2 : 1;
+          const numOpacity = !num ? 0.2 : 1;
+          const lineOpacity = !hasSlashChar ? 0.2 : 1;
+          const denOpacity = !den ? 0.2 : 1;
           items.push(
             <span key="pending" style={{ display:"inline-flex", alignItems:"center", gap:4, position:"relative" }}>
               {whole && <span>{whole}</span>}
@@ -279,15 +278,15 @@
                 <span style={{ opacity:denOpacity }}>{den || "·"}</span>
               </span>
               {pendingUnit === "cm"
-                ? <span style={{ fontSize:11, verticalAlign:"baseline" }}>cm</span>
+                ? <span style={{ fontSize:9, verticalAlign:"baseline" }}>cm</span>
                 : <span style={{ fontSize:11, position:"absolute", top:0, right:0, lineHeight:1 }}>″</span>
               }
             </span>
           );
         } else {
           items.push(
-            <span key="pending" style={{ whiteSpace:"nowrap" }}>
-              {pendingInput.trim()}<span style={{ fontSize:"0.5em", verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
+            <span key="pending" style={{ whiteSpace:"nowrap", marginRight: pendingUnit === "cm" ? "6px" : 0 }}>
+              {pendingInput.trim()}<span style={{ fontSize:"0.4em", marginLeft: pendingUnit === "cm" ? "2px" : 0, verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
             </span>
           );
         }
