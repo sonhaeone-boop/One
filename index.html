@@ -12,6 +12,15 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>Pattern Ruler Calc</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#f1e5c4"/>
+  <link rel="icon" href="/icon-192.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="/icon-192.png"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="RulerCalc"/>
   <style>
     *{box-sizing:border-box;margin:0;padding:0;}
     html,body{
@@ -314,6 +323,46 @@
         }
       });
 
+      // ── Install App (PWA) ──────────────────────────────
+      const [deferredPrompt, setDeferredPrompt] = useState(null);
+      const [showInstall, setShowInstall] = useState(false);
+      const [showIOSHelp, setShowIOSHelp] = useState(false);
+      const isIOS = typeof navigator !== "undefined" && /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isStandalone = typeof window !== "undefined" &&
+        (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true);
+
+      useEffect(() => {
+        if (isStandalone) return; // already installed — never show the button
+        function onBeforeInstall(e) {
+          e.preventDefault();
+          setDeferredPrompt(e);
+          setShowInstall(true);
+        }
+        function onInstalled() {
+          setShowInstall(false);
+          setDeferredPrompt(null);
+        }
+        window.addEventListener("beforeinstallprompt", onBeforeInstall);
+        window.addEventListener("appinstalled", onInstalled);
+        // iOS Safari never fires beforeinstallprompt — show the button anyway with fallback instructions
+        if (isIOS) setShowInstall(true);
+        return () => {
+          window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+          window.removeEventListener("appinstalled", onInstalled);
+        };
+      }, []);
+
+      async function handleInstallClick() {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          setDeferredPrompt(null);
+          setShowInstall(false);
+        } else if (isIOS) {
+          setShowIOSHelp(true);
+        }
+      }
+
       const rawInputVal = parseNum(input);
       const inputInches = rawInputVal == null ? null
         : (unit === "cm" ? rawInputVal / CM_PER_INCH : rawInputVal);
@@ -433,13 +482,77 @@
           <div style={{ width:"100%", maxWidth:400, background:"#dad6b9", borderRadius:20, overflow:"hidden", boxShadow:"0 2px 6px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.4)" }}>
 
             {/* Header */}
-            <div style={{ padding:"16px 18px 10px", display:"flex", alignItems:"center" }}>
+            <div style={{ padding:"16px 18px 10px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <img
                 src="data:image/png;base64,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"
                 alt="Reunited One"
                 style={{ height:9, width:"auto", display:"block" }}
               />
+              {showInstall && (
+                <button
+                  onClick={handleInstallClick}
+                  style={{
+                    display:"flex", alignItems:"center", gap:4,
+                    background:"#354755", color:"#f1ecdc",
+                    border:"none", borderRadius:20,
+                    padding:"5px 11px",
+                    fontSize:10, fontWeight:600,
+                    fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    cursor:"pointer",
+                  }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f1ecdc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 3v13"/>
+                    <path d="M7 11l5 5 5-5"/>
+                    <path d="M4 20h16"/>
+                  </svg>
+                  Install App
+                </button>
+              )}
             </div>
+
+            {showIOSHelp && (
+              <div
+                onClick={() => setShowIOSHelp(false)}
+                style={{
+                  position:"fixed", inset:0, background:"rgba(0,0,0,0.4)",
+                  display:"flex", alignItems:"flex-end", justifyContent:"center",
+                  zIndex:50,
+                }}
+              >
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    background:"#e6e3d1", borderRadius:"18px 18px 0 0",
+                    padding:"22px 24px 28px", width:"100%", maxWidth:400,
+                    fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif",
+                  }}
+                >
+                  <div style={{ fontSize:14, fontWeight:700, color:"#354755", marginBottom:12 }}>
+                    Add to Home Screen
+                  </div>
+                  <div style={{ fontSize:12.5, color:"#354755", lineHeight:1.7 }}>
+                    1. Tap the <strong>Share</strong> button
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#354755" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign:"middle", margin:"0 2px" }}>
+                      <path d="M12 3v13"/><path d="M7 6l5-5 5 5"/><rect x="4" y="10" width="16" height="11" rx="2"/>
+                    </svg>
+                    at the bottom of Safari<br/>
+                    2. Scroll down and tap <strong>"Add to Home Screen"</strong><br/>
+                    3. Tap <strong>"Add"</strong> in the top right
+                  </div>
+                  <button
+                    onClick={() => setShowIOSHelp(false)}
+                    style={{
+                      marginTop:18, width:"100%", height:42, borderRadius:8, border:"none",
+                      background:"#354755", color:"#f1ecdc", fontSize:13, fontWeight:700,
+                      cursor:"pointer", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif",
+                    }}
+                  >
+                    Got it
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* LCD */}
             <div style={{ margin:"0 12px 14px", background:"#c9c5a7", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #afa891", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
@@ -517,6 +630,14 @@
     }
 
     ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch((err) => {
+          console.warn("Service worker registration failed:", err);
+        });
+      });
+    }
   </script>
 </body>
 </html>

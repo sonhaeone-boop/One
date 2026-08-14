@@ -1,0 +1,32 @@
+{
+  "name": "Patternmaking 1/16\" Ruler Calculator",
+  "short_name": "RulerCalc",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1e5c4",
+  "theme_color": "#f1e5c4",
+  "description": "A patternmaking calculator for 1/16\" ruler measurements, with inch/cm conversion and fraction support.",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
