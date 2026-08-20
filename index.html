@@ -281,7 +281,7 @@
           const denOpacity = !den ? 0.2 : 1;
           items.push(
             <span key="pending" style={{ display:"inline-flex", alignItems:"center", gap:4, position:"relative" }}>
-              {whole && <span>{whole}</span>}
+              <span style={{ visibility: whole ? "visible" : "hidden", width: whole ? "auto" : 0, overflow:"hidden" }}>{whole || "0"}</span>
               <span style={{ display:"inline-flex", flexDirection:"column", alignItems:"center", lineHeight:1.1, fontWeight:700, fontSize:18, paddingRight: pendingUnit !== "cm" ? 10 : 0 }}>
                 <span style={{ opacity:numOpacity }}>{num || "·"}</span>
                 <span style={{ width:"100%", height:1.5, background:"#354755", margin:"2px 0", opacity:lineOpacity }}/>
@@ -316,13 +316,6 @@
       const [unit,     setUnit]     = useState("inch");
       const [result,   setResult]   = useState(null); // set only when = pressed (inches)
       const [resultExpr, setResultExpr] = useState(null); // frozen expression string after =
-      const mainDisplayRef = useRef(null);
-
-      useEffect(() => {
-        if (mainDisplayRef.current) {
-          mainDisplayRef.current.scrollLeft = mainDisplayRef.current.scrollWidth;
-        }
-      });
 
       // ── Install App (PWA) ──────────────────────────────
       const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -558,20 +551,18 @@
             )}
 
             {/* LCD */}
-            <div style={{ margin:"0 12px 14px", background:"#c9c5a7", borderRadius:6, padding:"14px 16px", height:138, border:"1px solid #afa891", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+            <div style={{ margin:"0 12px 14px", background:"#c9c5a7", borderRadius:6, padding:"8px 16px", height:108, border:"1px solid #afa891", boxShadow:"inset 0 1px 4px rgba(0,0,0,0.14), inset 0 -1px 0 rgba(255,255,255,0.25)", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
               <div style={{ fontSize:15, color:"#8599a3", fontWeight:600, textAlign:"right", lineHeight:1.2 }}>
                 <ExprLine tokens={tokens} pendingInput={input} pendingUnit={unit} resultExpr={resultExpr} showingResult={showingResult}/>
               </div>
-              <div style={{ textAlign:"right", overflowX:"hidden" }}>
-                <div ref={mainDisplayRef} className="no-scrollbar" style={{ overflowX:"auto", whiteSpace:"nowrap", scrollbarWidth:"none", msOverflowStyle:"none" }}>
-                  <span style={{ fontSize:36, fontWeight:700, color:"#354755", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", letterSpacing:-0.5, lineHeight:1 }}>
-                    {showingResult
-                      ? fmtFrac(toT(result))
-                      : hasExprContent
-                        ? <TokenDisplay tokens={tokens} pendingInput={input} pendingUnit={unit}/>
-                        : "0"}
-                  </span>
-                </div>
+              <div style={{ textAlign:"right", overflow:"hidden" }}>
+                <span style={{ fontSize: mainExpr.length > 20 ? 22 : mainExpr.length > 14 ? 27 : 36, fontWeight:700, color:"#354755", fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif", letterSpacing:-0.5, lineHeight:1, whiteSpace:"nowrap" }}>
+                  {showingResult
+                    ? fmtFrac(toT(result))
+                    : hasExprContent
+                      ? <TokenDisplay tokens={tokens} pendingInput={input} pendingUnit={unit}/>
+                      : "0"}
+                </span>
               </div>
               <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
                 {(liveInches != null && !exact) && <span style={{ fontSize:9.5, color:"#df9748", fontWeight:700 }}>≈</span>}
