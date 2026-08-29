@@ -100,31 +100,8 @@
       if (showingResult && resultExpr) {
         return <span style={{ fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>{resultExpr}</span>;
       }
-      const items = [];
-      tokens.forEach((t, i) => {
-        if (t.type === "op") {
-          items.push(<span key={i} style={{ margin:"0 3px" }}>{t.op}</span>);
-        } else {
-          items.push(
-            <span key={i} style={{ whiteSpace:"nowrap" }}>
-              {t.label}<span style={{ fontSize:"0.65em", verticalAlign: t.unit === "cm" ? "baseline" : "super" }}>{t.unit === "cm" ? "cm" : "″"}</span>
-            </span>
-          );
-        }
-      });
-      if (pendingInput) {
-        items.push(
-          <span key="pending" style={{ whiteSpace:"nowrap" }}>
-            {pendingInput}<span style={{ fontSize:"0.65em", verticalAlign: pendingUnit === "cm" ? "baseline" : "super" }}>{pendingUnit === "cm" ? "cm" : "″"}</span>
-          </span>
-        );
-      }
-      if (items.length === 0) return <span>&nbsp;</span>;
-      return (
-        <span style={{ fontFamily:"'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
-          {items}
-        </span>
-      );
+      // Stay blank while the expression is still being built — only reveal it after "=" is pressed.
+      return <span>&nbsp;</span>;
     }
 
     function calcOp(a, op, b) {
@@ -382,7 +359,6 @@
       const typingFraction = isTyping && unit === "inch" && (input.includes("/") || input.includes(" "));
 
       // Expression (grey line on top) — mirrors the building expression, or frozen after "="
-      const exprLine = showingResult ? resultExpr : mainExpr;
 
       // helper: make a number token from current input
       function makeNumToken() {
