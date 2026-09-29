@@ -52,6 +52,108 @@
   <script type="text/babel">
     const { useState, useRef, useEffect } = React;
 
+    /* ── Tap feedback: synthesized click sound + haptic vibration ── */
+    let _audioCtx = null;
+    function getAudioCtx() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!_audioCtx) _audioCtx = new AC();
+      if (_audioCtx.state === "suspended") _audioCtx.resume();
+      return _audioCtx;
+    }
+    // Three pitch tiers, high → low: "key" (digits/operators), "space", "dull" (delete).
+    // Same synthesis approach for all three so they read as one consistent sound
+    // family, just pitched differently: a bandpass-filtered noise "tick" (gives the
+    // metal/glass character instead of a cardboard-box thud) + a sine fundamental +
+    // a quiet, fast-decaying inharmonic overtone (what makes a struck metal/glass
+    // object sound different from a plain tone — a bell/glass has partials that
+    // aren't a clean multiple of the fundamental). Everything decays fast so it
+    // stays a "tap" rather than ringing out into something piercing.
+    // Noise is now nearly out of the mix — any broadband noise, even filtered,
+    // reads as grit/texture ("dry/powdery"), which is the opposite of clean.
+    // Clarity now comes almost entirely from two clean sine partials (fundamental
+    // + a slightly inharmonic overtone for the metal/glass color); the noise is
+    // just a whisper of attack snap underneath, not a textural layer.
+    const TICK_PRESETS = {
+      key:   { dur: 0.045, noiseFreq: 5200, noiseQ: 3.2, noiseGain: 0.055, oscFreq: 880, oscGain: 0.17, overtoneRatio: 2.6, overtoneGain: 0.08 },
+      space: { dur: 0.05,  noiseFreq: 4200, noiseQ: 3.0, noiseGain: 0.058, oscFreq: 700, oscGain: 0.19, overtoneRatio: 2.55, overtoneGain: 0.082 },
+      dull:  { dur: 0.075, noiseFreq: 1800, noiseQ: 2.4, noiseGain: 0.07,  oscFreq: 360, oscGain: 0.26, overtoneRatio: 2.35, overtoneGain: 0.09 },
+    };
+    const _noiseBufferCache = {};
+    function getNoiseBuffer(ctx, tier, dur) {
+      if (_noiseBufferCache[tier]) return _noiseBufferCache[tier];
+      const size = Math.floor(ctx.sampleRate * dur);
+      const buffer = ctx.createBuffer(1, size, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+      _noiseBufferCache[tier] = buffer;
+      return buffer;
+    }
+    function playTick(tier) {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const p = TICK_PRESETS[tier] || TICK_PRESETS.key;
+      const now = ctx.currentTime;
+      const dur = p.dur;
+
+      // Bandpass-filtered noise burst — bandpass (not lowpass) is what gives the
+      // brighter "tink" of metal/glass rather than a dull thud. Q kept moderate
+      // and the envelope very short so it reads as a tap, not a ring.
+      const noise = ctx.createBufferSource();
+      noise.buffer = getNoiseBuffer(ctx, tier, dur);
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.value = p.noiseFreq;
+      filter.Q.value = p.noiseQ;
+      const noiseGain = ctx.createGain();
+      const noiseDur = dur * 0.3;
+      noiseGain.gain.setValueAtTime(0.0001, now);
+      noiseGain.gain.linearRampToValueAtTime(p.noiseGain, now + 0.001);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0006, now + noiseDur);
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now);
+      noise.stop(now + noiseDur + 0.005);
+
+      // Sine fundamental for body/pitch.
+      const osc = ctx.createOscillator();
+      const oscGain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = p.oscFreq;
+      const oscDur = dur * 0.5;
+      oscGain.gain.setValueAtTime(0.0001, now);
+      oscGain.gain.linearRampToValueAtTime(p.oscGain, now + 0.002);
+      oscGain.gain.exponentialRampToValueAtTime(0.0007, now + oscDur);
+      osc.connect(oscGain);
+      oscGain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + oscDur + 0.005);
+
+      // Quiet inharmonic overtone, decaying faster than the fundamental — this is
+      // the bit that reads as "metal/glass" rather than a plain soft tone. Kept
+      // low-gain and brief so it doesn't turn into a sharp/piercing ring.
+      const overtone = ctx.createOscillator();
+      const overtoneGain = ctx.createGain();
+      overtone.type = "sine";
+      overtone.frequency.value = p.oscFreq * p.overtoneRatio;
+      const overtoneDur = dur * 0.22;
+      overtoneGain.gain.setValueAtTime(0.0001, now);
+      overtoneGain.gain.linearRampToValueAtTime(p.overtoneGain, now + 0.0015);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.0006, now + overtoneDur);
+      overtone.connect(overtoneGain);
+      overtoneGain.connect(ctx.destination);
+      overtone.start(now);
+      overtone.stop(now + overtoneDur + 0.005);
+    }
+    function vibrateTap() {
+      try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+    }
+    function pressFeedback(tier) {
+      playTick(tier || "key");
+      vibrateTap();
+    }
+
     /* ── Math helpers ─────────────────────────────────── */
     const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
 
@@ -182,7 +284,7 @@
         : "0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.08)";
       return (
         <button
-          onPointerDown={() => { setPressed(true); onPress(); }}
+          onPointerDown={() => { setPressed(true); pressFeedback(label === "⌫" ? "dull" : "key"); onPress(); }}
           onPointerUp={() => setPressed(false)}
           onPointerLeave={() => setPressed(false)}
           style={{
@@ -207,7 +309,15 @@
     const CM_PER_INCH = 2.54;
 
     // Evaluate a token stream left-to-right (no operator precedence — sequential like a desk calc).
-    // tokens: array of { type:"num", inches, label } | { type:"op", op }
+    // tokens: array of { type:"num", inches, raw, label } | { type:"op", op }
+    //
+    // For + / − both operands must be true lengths, so we use the cm→inch-converted
+    // `.inches` value — that's why cm addition/subtraction always worked.
+    // For × / ÷ the second operand is a plain multiplier/divisor (e.g. "×3" to triple
+    // a length, "÷2" to split it in half), not itself a length — so it must NOT be
+    // run through the cm→inch conversion. Using `.inches` there was silently dividing
+    // the multiplier by 2.54 (or multiplying the divisor by it), which is exactly why
+    // cm-mode × and ÷ came out wrong while cm + and − didn't.
     function evalTokens(tokens) {
       if (tokens.length === 0) return null;
       let acc = tokens[0].type === "num" ? tokens[0].inches : null;
@@ -217,7 +327,9 @@
         const opTok = tokens[i];
         const numTok = tokens[i + 1];
         if (!opTok || opTok.type !== "op" || !numTok || numTok.type !== "num") break;
-        const r = calcOp(acc, opTok.op, numTok.inches);
+        const isScale = opTok.op === "×" || opTok.op === "÷";
+        const operand = isScale ? numTok.raw : numTok.inches;
+        const r = calcOp(acc, opTok.op, operand);
         if (r == null) return null;
         acc = r;
         i += 2;
@@ -364,7 +476,7 @@
       function makeNumToken() {
         if (inputInches == null) return null;
         const label = unit === "cm" ? `${rawInputVal}` : fmtFracExpr(toT(inputInches));
-        return { type:"num", inches: inputInches, label, unit };
+        return { type:"num", inches: inputInches, raw: rawInputVal, label, unit };
       }
 
       function pressDigit(d) {
@@ -392,7 +504,7 @@
       }
       function pressOp(newOp) {
         if (showingResult) {
-          setTokens([{ type:"num", inches: result, label: fmtFracExpr(toT(result)), unit:"inch" }, { type:"op", op:newOp }]);
+          setTokens([{ type:"num", inches: result, raw: result, label: fmtFracExpr(toT(result)), unit:"inch" }, { type:"op", op:newOp }]);
           setResult(null); setResultExpr(null); setInput("");
           return;
         }
@@ -576,7 +688,7 @@
                 <Key label="="  orange onPress={pressEquals}/>
               </div>
               <div style={{ marginTop:7 }}>
-                <button onPointerDown={pressSpace} style={{ width:"100%", height:52, borderRadius:5, border:"none", background:"#c8c7ae", color:"#354755", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation", boxShadow:"0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35)" }}>
+                <button onPointerDown={() => { pressFeedback("space"); pressSpace(); }} style={{ width:"100%", height:52, borderRadius:5, border:"none", background:"#c8c7ae", color:"#354755", fontSize:12, fontWeight:700, cursor:"pointer", letterSpacing:4, touchAction:"manipulation", boxShadow:"0 1px 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.35)" }}>
                   SPACE
                 </button>
               </div>
