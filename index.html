@@ -63,21 +63,17 @@
     }
     // Three pitch tiers, high → low: "key" (digits/operators), "space", "dull" (delete).
     // Same synthesis approach for all three so they read as one consistent sound
-    // family, just pitched differently: a bandpass-filtered noise "tick" (gives the
-    // metal/glass character instead of a cardboard-box thud) + a sine fundamental +
-    // a quiet, fast-decaying inharmonic overtone (what makes a struck metal/glass
-    // object sound different from a plain tone — a bell/glass has partials that
-    // aren't a clean multiple of the fundamental). Everything decays fast so it
-    // stays a "tap" rather than ringing out into something piercing.
-    // Noise is now nearly out of the mix — any broadband noise, even filtered,
-    // reads as grit/texture ("dry/powdery"), which is the opposite of clean.
-    // Clarity now comes almost entirely from two clean sine partials (fundamental
-    // + a slightly inharmonic overtone for the metal/glass color); the noise is
-    // just a whisper of attack snap underneath, not a textural layer.
+    // family, just pitched differently: a whisper of bandpass-filtered noise for
+    // attack snap, a sine fundamental, and a clean octave overtone for brightness.
+    // The overtone is a true harmonic (2×) rather than an off-ratio partial —
+    // two non-harmonic tones beat against each other as they decay and that beat
+    // is what reads as an unwanted "ring"; a clean octave has nothing to beat
+    // against. Every layer decays very fast (a handful of milliseconds) so it
+    // stays a dense, solid-feeling "tap" rather than a held, ringing note.
     const TICK_PRESETS = {
-      key:   { dur: 0.045, noiseFreq: 5200, noiseQ: 3.2, noiseGain: 0.055, oscFreq: 880, oscGain: 0.17, overtoneRatio: 2.6, overtoneGain: 0.08 },
-      space: { dur: 0.05,  noiseFreq: 4200, noiseQ: 3.0, noiseGain: 0.058, oscFreq: 700, oscGain: 0.19, overtoneRatio: 2.55, overtoneGain: 0.082 },
-      dull:  { dur: 0.075, noiseFreq: 1800, noiseQ: 2.4, noiseGain: 0.07,  oscFreq: 360, oscGain: 0.26, overtoneRatio: 2.35, overtoneGain: 0.09 },
+      key:   { dur: 0.04,  noiseFreq: 6500, noiseQ: 3.2, noiseGain: 0.055, oscFreq: 1100, oscGain: 0.22, overtoneRatio: 2, overtoneGain: 0.085 },
+      space: { dur: 0.045, noiseFreq: 5550, noiseQ: 3.0, noiseGain: 0.058, oscFreq: 875,  oscGain: 0.24, overtoneRatio: 2, overtoneGain: 0.088 },
+      dull:  { dur: 0.065, noiseFreq: 2400, noiseQ: 2.4, noiseGain: 0.07,  oscFreq: 450,  oscGain: 0.30, overtoneRatio: 2, overtoneGain: 0.095 },
     };
     const _noiseBufferCache = {};
     function getNoiseBuffer(ctx, tier, dur) {
@@ -96,55 +92,69 @@
       const now = ctx.currentTime;
       const dur = p.dur;
 
-      // Bandpass-filtered noise burst — bandpass (not lowpass) is what gives the
-      // brighter "tink" of metal/glass rather than a dull thud. Q kept moderate
-      // and the envelope very short so it reads as a tap, not a ring.
-      const noise = ctx.createBufferSource();
-      noise.buffer = getNoiseBuffer(ctx, tier, dur);
-      const filter = ctx.createBiquadFilter();
-      filter.type = "bandpass";
-      filter.frequency.value = p.noiseFreq;
-      filter.Q.value = p.noiseQ;
-      const noiseGain = ctx.createGain();
-      const noiseDur = dur * 0.3;
-      noiseGain.gain.setValueAtTime(0.0001, now);
-      noiseGain.gain.linearRampToValueAtTime(p.noiseGain, now + 0.001);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0006, now + noiseDur);
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(ctx.destination);
-      noise.start(now);
-      noise.stop(now + noiseDur + 0.005);
+      // No noise layer. Random noise — even filtered down to a narrow band and
+      // turned down quiet — has an inherently grainy, sandy texture, because
+      // it's random amplitude at every instant rather than a smooth repeating
+      // wave. That's very likely what was still reading as "dry/powdery": real
+      // metal or glass does have a noisy attack transient physically, but
+      // literal synthesized noise doesn't sound like that click — it sounds
+      // like static. The attack "snap" here comes instead from how fast the
+      // tones below ramp in (under 2ms) — a sharp-edged tone has its own
+      // broadband click built in, without the grainy texture.
+      const _unusedNoiseFreq = p.noiseFreq; // kept in the preset for tuning reference
 
-      // Sine fundamental for body/pitch.
+      // Sine fundamental for body/pitch — cut very short. Any sine that sustains
+      // even ~15-20ms reads as a held note ("ringing"); a solid, dense-feeling
+      // tap decays almost immediately, so this is just long enough to register
+      // a pitch, not long enough to sound like a note.
       const osc = ctx.createOscillator();
       const oscGain = ctx.createGain();
       osc.type = "sine";
       osc.frequency.value = p.oscFreq;
-      const oscDur = dur * 0.5;
+      const oscDur = dur * 0.17;
       oscGain.gain.setValueAtTime(0.0001, now);
-      oscGain.gain.linearRampToValueAtTime(p.oscGain, now + 0.002);
-      oscGain.gain.exponentialRampToValueAtTime(0.0007, now + oscDur);
+      oscGain.gain.linearRampToValueAtTime(p.oscGain, now + 0.0015);
+      oscGain.gain.exponentialRampToValueAtTime(0.0004, now + oscDur);
       osc.connect(oscGain);
       oscGain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + oscDur + 0.005);
 
-      // Quiet inharmonic overtone, decaying faster than the fundamental — this is
-      // the bit that reads as "metal/glass" rather than a plain soft tone. Kept
-      // low-gain and brief so it doesn't turn into a sharp/piercing ring.
+      // A clean octave overtone (2× — a true harmonic, not the off-ratio
+      // partial used in earlier passes). Two frequencies that aren't a clean
+      // multiple of each other beat against one another as they decay, and
+      // that beating is what was reading as an unwanted "ring"; an octave
+      // locks perfectly with the fundamental so it just adds brightness with
+      // nothing left to beat against. Gone even faster than the fundamental.
       const overtone = ctx.createOscillator();
       const overtoneGain = ctx.createGain();
       overtone.type = "sine";
       overtone.frequency.value = p.oscFreq * p.overtoneRatio;
-      const overtoneDur = dur * 0.22;
+      const overtoneDur = dur * 0.07;
       overtoneGain.gain.setValueAtTime(0.0001, now);
-      overtoneGain.gain.linearRampToValueAtTime(p.overtoneGain, now + 0.0015);
-      overtoneGain.gain.exponentialRampToValueAtTime(0.0006, now + overtoneDur);
+      overtoneGain.gain.linearRampToValueAtTime(p.overtoneGain, now + 0.001);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.0004, now + overtoneDur);
       overtone.connect(overtoneGain);
       overtoneGain.connect(ctx.destination);
       overtone.start(now);
       overtone.stop(now + overtoneDur + 0.005);
+
+      // A third partial, a clean fifth-above-the-octave (3×, still a true
+      // harmonic) for a bit of extra glint/sparkle now that there's no noise
+      // layer supplying brightness. Barely audible on its own, gone almost
+      // instantly — it's texture, not a separate note.
+      const glint = ctx.createOscillator();
+      const glintGain = ctx.createGain();
+      glint.type = "sine";
+      glint.frequency.value = p.oscFreq * 3;
+      const glintDur = dur * 0.045;
+      glintGain.gain.setValueAtTime(0.0001, now);
+      glintGain.gain.linearRampToValueAtTime(p.overtoneGain * 0.55, now + 0.0008);
+      glintGain.gain.exponentialRampToValueAtTime(0.0004, now + glintDur);
+      glint.connect(glintGain);
+      glintGain.connect(ctx.destination);
+      glint.start(now);
+      glint.stop(now + glintDur + 0.004);
     }
     function vibrateTap() {
       try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
